@@ -4,6 +4,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+STATION_METADATA = {
+    "location_id": 5544,
+    "location_name": "Model Town, Patiala - PPCB",
+    "latitude": 30.349388,
+    "longitude": 76.366642,
+}
+
 SENSOR_METADATA = {
     15243: {"parameter": "pm25", "unit": "µg/m³"},
     12235142: {"parameter": "pm25", "unit": "µg/m³"},
@@ -85,27 +92,37 @@ def normalized_record(
         "location_id": (
             source_metadata.get("location_id")
             or metadata.get("location_id")
-            or envelope.get("location_id")
+            or STATION_METADATA["location_id"]
         ),
+        "location_name": STATION_METADATA["location_name"],
         "sensor_id": sensor_id,
         "parameter": sensor["parameter"],
         "value": float(value),
         "unit": sensor["unit"],
         "observed_at": extract_timestamp(record),
-        "latitude": coordinates.get("latitude"),
-        "longitude": coordinates.get("longitude"),
+        "latitude": (
+            coordinates.get("latitude")
+            if coordinates.get("latitude") is not None
+            else STATION_METADATA["latitude"]
+        ),
+        "longitude": (
+            coordinates.get("longitude")
+            if coordinates.get("longitude") is not None
+            else STATION_METADATA["longitude"]
+        ),
         "source_type": envelope.get("source_type", "real"),
         "source_name": envelope.get("source_name", "openaq"),
         "ingested_at": envelope.get("ingested_at"),
         "source_record_id": record.get("id"),
     }
 
+
 def normalize_file(file_path: Path) -> tuple[list[dict], list[dict]]:
     """Normalize one raw sensor file and collect invalid records separately."""
-    
+
     envelope = json.loads(file_path.read_text(encoding="utf-8"))
     sensor_id = extract_sensor_id(file_path, envelope)
-    
+
     payload = envelope.get("raw_payload", [])
     if isinstance(payload, list):
         records = payload
@@ -113,24 +130,24 @@ def normalize_file(file_path: Path) -> tuple[list[dict], list[dict]]:
         records = payload.get("records", [])
     else:
         raise ValueError(f"Expected a results list in {file_path.name}")
-    
+
     if not isinstance(records, list):
         raise ValueError(f"Expected a results list in {file_path.name}")
-    
+
     normalized = []
     rejected = []
-    
+
     for index, record in enumerate(records):
         try:
-            normalized.append(
-                normalized_record(record, sensor_id, envelope)
-            )
+            normalized.append(normalized_record(record, sensor_id, envelope))
         except (ValueError, TypeError, AttributeError) as exc:
-            rejected.append({
-                "source_file": file_path.name,
-                "record_index": index,
-                "reason": str(exc),
-                "raw_record": record,
-            })
-            
+            rejected.append(
+                {
+                    "source_file": file_path.name,
+                    "record_index": index,
+                    "reason": str(exc),
+                    "raw_record": record,
+                }
+            )
+
     return normalized, rejected
