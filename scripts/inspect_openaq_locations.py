@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 RAW_DIR = Path("data/raw/openaq")
 
 SENSOR_IDS = [15243, 12235142, 15260, 12235141]

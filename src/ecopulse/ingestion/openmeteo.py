@@ -95,19 +95,20 @@ def fetch_weather() -> dict:
             raise OpenMeteoIngestionError(
                 f"Invalid or missing weather variable: {variable}"
             )
-            
+
     logger.info(
         "Successfully fetched %d hourly weather records",
         len(times),
     )
-    
+
     return payload
+
 
 def save_raw_weather(payload: dict) -> Path:
     config = get_source_config()
-    
+
     ingested_at = datetime.now(UTC)
-    
+
     envelope = {
         "source_type": "real",
         "source_name": "open_meteo",
@@ -122,16 +123,14 @@ def save_raw_weather(payload: dict) -> Path:
         "ingest_at": ingested_at.isoformat(),
         "raw_payload": payload,
     }
-    
+
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
-    filename = (
-        f"weather_{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
-    )
-    
+
+    filename = f"weather_{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
+
     output_path = RAW_DATA_DIR / filename
     temp_path = output_path.with_suffix(".tmp")
-    
+
     try:
         temp_path.write_text(
             json.dumps(envelope, indent=2),
@@ -142,17 +141,18 @@ def save_raw_weather(payload: dict) -> Path:
         temp_path.unlink(missing_ok=True)
         logger.exception("Unable to save raw weather data")
         raise
-    
+
     logger.info("Raw weather data saved to %s", output_path)
-    
+
     return output_path
+
 
 def run_ingestion() -> Path:
     logger.info("Starting Open-Meteo ingestion")
-    
+
     payload = fetch_weather()
     output_path = save_raw_weather(payload)
-    
+
     logger.info("Open-Meteo ingestion completed")
-    
+
     return output_path

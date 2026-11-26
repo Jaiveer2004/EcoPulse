@@ -113,15 +113,13 @@ def fetch_sensor_measurement(
 
     return records
 
+
 def save_sensor_measurements(
-    sensor: dict,
-    records: list[dict],
-    date_from: str,
-    date_to: str
+    sensor: dict, records: list[dict], date_from: str, date_to: str
 ) -> Path:
     config = get_source_config()
     ingested_at = datetime.now(UTC)
-    
+
     envelope = {
         "source_type": "real",
         "source_name": "openaq",
@@ -140,22 +138,18 @@ def save_sensor_measurements(
         "record_count": len(records),
         "raw_payload": records,
     }
-    
+
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     filename = (
-        f"sensor_{sensor['sensor_id']}_"
-        f"{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        f"sensor_{sensor['sensor_id']}_{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
     )
-    
+
     output_path = RAW_DATA_DIR / filename
     temp_path = output_path.with_suffix(".tmp")
-    
+
     try:
-        temp_path.write_text(
-            json.dumps(envelope, indent=2),
-            encoding="utf-8"
-        )
+        temp_path.write_text(json.dumps(envelope, indent=2), encoding="utf-8")
         temp_path.replace(output_path)
     except OSError:
         temp_path.unlink(missing_ok=True)
@@ -164,48 +158,40 @@ def save_sensor_measurements(
             sensor["sensor_id"],
         )
         raise
-    
+
     return output_path
+
 
 def run_measurement_ingestion() -> list[Path]:
     logger.info("Starting OpenAQ measurement ingestion")
-    
+
     date_from, date_to = get_date_window()
     output_files = []
-    
+
     for sensor in TARGET_SENSORS:
         sensor_id = sensor["sensor_id"]
-        
+
         logger.info(
             "Fetching %s measurements for sensor %s",
             sensor["parameter"],
             sensor_id,
         )
-        
-        records = fetch_sensor_measurement(
-            sensor_id,
-            date_from,
-            date_to
-        )
-        
-        output_path = save_sensor_measurements(
-            sensor,
-            records,
-            date_from,
-            date_to
-        )
-        
+
+        records = fetch_sensor_measurement(sensor_id, date_from, date_to)
+
+        output_path = save_sensor_measurements(sensor, records, date_from, date_to)
+
         output_files.append(output_path)
-        
+
         logger.info(
             "Sensor %s ingestion completed: %s records",
             sensor_id,
             len(records),
         )
-        
+
     logger.info(
         "OpenAQ measurement ingestion completed. Files: %s",
         len(output_files),
     )
-    
+
     return output_files

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -116,14 +116,15 @@ def extract_sensor_summary(locations: list[dict]) -> list[dict]:
                     "sensor_last_updated": sensor.get("datetimeLast"),
                 }
             )
-            
+
     return sensor_records
+
 
 def save_raw_locations(locations: list[dict]) -> Path:
     config = get_source_config()
-    
+
     ingested_at = datetime.now(UTC)
-    
+
     envelope = {
         "source_type": "real",
         "source_name": "openaq",
@@ -138,42 +139,41 @@ def save_raw_locations(locations: list[dict]) -> Path:
         "ingested_at": ingested_at.isoformat(),
         "raw_payload": locations,
     }
-    
+
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
-    filename = (
-        f"locations_{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
-    )
-    
+
+    filename = f"locations_{ingested_at.strftime('%Y%m%dT%H%M%S%fZ')}.json"
+
     output_path = RAW_DATA_DIR / filename
     temp_path = output_path.with_suffix(".tmp")
-    
+
     try:
         temp_path.write_text(
             json.dumps(envelope, indent=2),
             encoding="utf-8",
         )
         temp_path.replace(output_path)
-        
+
     except OSError:
         temp_path.unlink(missing_ok=True)
         logger.exception("Unable to save OpenAQ locations")
         raise
-    
+
     return output_path
+
 
 def run_location_discovery() -> tuple[Path, list[dict]]:
     logger.info("Starting OpenAQ location discovery")
-    
+
     locations = get_locations()
     output_path = save_raw_locations(locations)
-    
+
     sensors = extract_sensor_summary(locations)
-    
+
     logger.info(
         "Discovered %s locations and %s sensors",
         len(locations),
         len(sensors),
     )
-    
+
     return output_path, sensors

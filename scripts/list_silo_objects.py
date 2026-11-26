@@ -1,4 +1,3 @@
-
 from ecopulse.object_storage import (
     create_s3_client,
     get_bucket_name,
@@ -17,10 +16,7 @@ def main() -> None:
 
     for page in paginator.paginate(Bucket=bucket):
         for obj in page.get("Contents", []):
-            print(
-                f"{obj['Key']} | "
-                f"{obj['Size']} bytes"
-            )
+            print(f"{obj['Key']} | {obj['Size']} bytes")
             total_objects += 1
 
     print(f"\nTotal objects: {total_objects}")

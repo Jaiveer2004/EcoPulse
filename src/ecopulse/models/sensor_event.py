@@ -39,7 +39,7 @@ class SensorEvent(BaseModel):
             raise ValueError("Timestamp must include timezone information")
 
         return value
-    
+
     @model_validator(mode="after")
     def validate_sensor_parameter(self):
         expected_sensor = {
@@ -49,8 +49,7 @@ class SensorEvent(BaseModel):
 
         if self.sensor_id != expected_sensor[self.parameter]:
             raise ValueError(
-                f"{self.parameter} must use sensor "
-                f"{expected_sensor[self.parameter]}"
+                f"{self.parameter} must use sensor {expected_sensor[self.parameter]}"
             )
 
         if self.parameter == "pm25" and self.value > 1000:

@@ -1,12 +1,11 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, UTC
 
 from pydantic import ValidationError
 
 from ecopulse.models.air_quality import AirQualityRecord
 from ecopulse.models.weather import WeatherRecord
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -81,11 +80,11 @@ def validate_file(
         write_jsonl(output_path / f"validated_{file_prefix}.jsonl", valid_records)
 
         write_jsonl(output_path / f"rejected{file_prefix}.jsonl", rejected_records)
-        
+
         total = len(input_records)
         valid_count = len(valid_records)
         rejected_count = len(rejected_records)
-        
+
         return {
             "source": source_name,
             "input_file": str(input_path.relative_to(PROJECT_ROOT)),
@@ -100,64 +99,54 @@ def validate_file(
 
 def main() -> None:
     air_files = sorted(
-        (PROJECT_ROOT / "data/processed/openaq").glob(
-            "measurements_*.jsonl"
-        )
+        (PROJECT_ROOT / "data/processed/openaq").glob("measurements_*.jsonl")
     )
-    
+
     weather_files = sorted(
-            (PROJECT_ROOT / "data/processed/openmeteo").glob(
-                "weather_*.jsonl"
-            )
-        )
-    
+        (PROJECT_ROOT / "data/processed/openmeteo").glob("weather_*.jsonl")
+    )
+
     results = []
-    
+
     for path in air_files:
         results.append(
             validate_file(
-                path,
-                PROJECT_ROOT / "data/validated/openaq",
-                AirQualityRecord,
-                "openaq"
+                path, PROJECT_ROOT / "data/validated/openaq", AirQualityRecord, "openaq"
             )
         )
-        
+
     for path in weather_files:
-            results.append(
-                validate_file(
-                    path,
-                    PROJECT_ROOT / "data/validated/openmeteo",
-                    WeatherRecord,
-                    "openmeteo"
-                )
+        results.append(
+            validate_file(
+                path,
+                PROJECT_ROOT / "data/validated/openmeteo",
+                WeatherRecord,
+                "openmeteo",
             )
-            
+        )
+
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    
+
     report = {
         "pipeline": "EcoPulse Data Quality Validation",
         "validated_at": datetime.now(UTC).isoformat(),
         "files_processed": len(results),
         "results": results,
     }
-    
+
     report_dir = PROJECT_ROOT / "data/quality_reports"
     report_dir.mkdir(parents=True, exist_ok=True)
-    
+
     report_path = report_dir / f"quality_{timestamp}.json"
-    
-    report_path.write_text(
-        json.dumps(report, indent=4),
-        encoding="utf-8"
-    )
-    
+
+    report_path.write_text(json.dumps(report, indent=4), encoding="utf-8")
+
     print("\nEcoPulse Data Quality Report")
     print("=" * 35)
-    
+
     if not results:
         print("No normalized input files found.")
-        
+
     for result in results:
         print(f"\nSource: {result['source']}")
         print(f"Input: {result['input_file']}")
@@ -167,7 +156,7 @@ def main() -> None:
         print(f"Quality rate: {result['quality_rate_percent']}%")
 
     print(f"\nFull report: {report_path}")
-    
-    
+
+
 if __name__ == "__main__":
     main()

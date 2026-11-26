@@ -10,7 +10,7 @@ class AirQualityRecord(BaseModel):
     sensor_id: int = Field(gt=0)
     location_id: int = Field(gt=0)
     location_name: str = Field(min_length=1)
-    
+
     parameter: str = Field(min_length=1)
     value: float = Field(ge=0)
     unit: str = Field(min_length=1)
@@ -25,14 +25,11 @@ class AirQualityRecord(BaseModel):
     source_name: str = Literal["openaq"]
 
     source_record_id: None = None
-    
+
     @field_validator("observed_at", "ingested_at")
     @classmethod
-    def timestamps_must_be_timezone_aware(
-        cls,
-        value: datetime
-    ) -> datetime:
+    def timestamps_must_be_timezone_aware(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError ("Timestamp must include timezone information")
-        
+            raise ValueError("Timestamp must include timezone information")
+
         return value
